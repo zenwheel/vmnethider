@@ -22,7 +22,7 @@ const Mainloop = imports.mainloop;
 const Extension = imports.misc.extensionUtils.getCurrentExtension();
 
 let extensionName = Extension.dir.get_basename();
-let matchRegExp = /^Ethernet \(vmnet[a-z0-9]+\)$|^$/i;
+let matchRegExp = /^Ethernet \(vmnet[a-z0-9]+\)$|^Ethernet \(veth[a-z0-9]+\)$|^$/i;
 
 const VMNetHider = new Lang.Class({
     Name : 'vmnethider',
@@ -54,13 +54,6 @@ const VMNetHider = new Lang.Class({
                         this._deviceAdded(_devices[i]._getDescription(), _devices[i]);
                     }
                 }
-                _devices.watch('length', function () {
-                    let _network = Main.panel.statusArea.aggregateMenu._network;
-                    let _devices = _network._devices.wired.devices;
-                    _devices.forEach(function (device) {
-                        this._deviceAdded(device._getDescription(), device);
-                    }.bind(this));
-                }.bind(this));
             }
         }
     },
@@ -70,18 +63,8 @@ const VMNetHider = new Lang.Class({
         }
 
         this._ethDevices[deviceDescription] = {};
-        if(this._ethDevices[deviceDescription].timeoutId){
-            Mainloop.source_remove(this._ethDevices[deviceDescription].timeoutId);
-            this._ethDevices[deviceDescription].timeoutId = null;
-        }
 
         log(extensionName + ' hide: ' + deviceDescription);
-        device.item.actor.watch('visible', function (property, from, to) {
-            if (to) {
-                log(extensionName + ' rehide: ' + deviceDescription);
-                device.item.actor.visible = false;
-            }
-        });
 
         device.item.actor.visible = false;
         this._ethDevices[deviceDescription].device = device;
@@ -89,14 +72,12 @@ const VMNetHider = new Lang.Class({
 
     _deviceRemoved : function(deviceDescription, device) {
         log(extensionName + ' show: ' + deviceDescription);
-        device.item.actor.unwatch('visible');
 
         device.item.actor.visible = true;
         delete this._ethDevices[deviceDescription];
     },
 
     destroy : function() {
-        Main.panel.statusArea.aggregateMenu._network._devices.wired.devices.unwatch('length');
         for ( var deviceDescription in this._ethDevices) {
             if (this._ethDevices.hasOwnProperty(deviceDescription)) {
                 this._deviceRemoved(deviceDescription, this._ethDevices[deviceDescription].device);
